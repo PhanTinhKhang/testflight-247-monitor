@@ -1,12 +1,9 @@
 name: TestFlight 24/7 Cloud Monitor
 
 on:
+  # workflow is completely paused
   # schedule:
   #   - cron: '0 */4 * * *'
-  workflow_dispatch: # Allows manual run anytime from GitHub button
-  push:
-    branches:
-      - main
 
 concurrency:
   group: testflight-247-cloud-monitor
