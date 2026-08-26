@@ -1,9 +1,8 @@
 name: TestFlight 24/7 Cloud Monitor
 
 on:
-  schedule:
-    # Runs automatically every 4 hours (avoid queue jamming)
-    - cron: '0 */4 * * *'
+  # schedule:
+  #   - cron: '0 */4 * * *'
   workflow_dispatch: # Allows manual run anytime from GitHub button
   push:
     branches:
