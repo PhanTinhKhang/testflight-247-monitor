@@ -1,7 +1,7 @@
 name: TestFlight 24/7 Cloud Monitor
 
 on:
-  # workflow is completely paused
+  workflow_dispatch: # Manual trigger only while waiting for your order
   # schedule:
   #   - cron: '0 */4 * * *'
 
