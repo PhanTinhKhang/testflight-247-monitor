@@ -2,8 +2,8 @@ name: TestFlight 24/7 Cloud Monitor
 
 on:
   schedule:
-    # Runs automatically every 5 minutes in GitHub's free cloud runners
-    - cron: '*/5 * * * *'
+    # Runs automatically every 4 hours (avoid queue jamming)
+    - cron: '0 */4 * * *'
   workflow_dispatch: # Allows manual run anytime from GitHub button
   push:
     branches:
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   cloud-monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 250
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
 
       - name: Run High-Frequency 24/7 Monitor (5s Polling)
         run: |
-          python tf_monitor.py --link-id "EgZ8sE2P" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --interval 5 --max-duration 290 --silent-start
+          python tf_monitor.py --link-id "EgZ8sE2P" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --interval 5 --max-duration 14340 --silent-start
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
