@@ -2,20 +2,16 @@ name: TestFlight 24/7 Cloud Monitor
 
 on:
   schedule:
-    # Trigger automatically every 5 minutes in GitHub's free cloud runners
+    # Runs automatically every 5 minutes in GitHub's free cloud runners
     - cron: '*/5 * * * *'
-  workflow_dispatch: # Allows manual trigger button in GitHub UI
+  workflow_dispatch: # Allows manual run anytime from GitHub button
   push:
     branches:
       - main
 
 concurrency:
   group: testflight-247-cloud-monitor
-  cancel-in-progress: false
-
-permissions:
-  contents: write
-  actions: write
+  cancel-in-progress: true
 
 jobs:
   cloud-monitor:
@@ -33,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Restore Persistent State Cache
+      - name: Restore State Cache
         uses: actions/cache/restore@v4
         with:
           path: monitor_state.json
@@ -41,25 +37,15 @@ jobs:
           restore-keys: |
             testflight-monitor-state-
 
-      - name: Run 24/7 Cloud Monitor (High-Frequency 5s Polling & 24h Reports)
+      - name: Run High-Frequency 24/7 Monitor (5s Polling)
         run: |
-          python tf_monitor.py --link-id "EgZ8sE2P" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --interval 5 --max-duration 280 --silent-start
+          python tf_monitor.py --link-id "EgZ8sE2P" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --interval 5 --max-duration 290 --silent-start
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
-      - name: Save Persistent State Cache
+      - name: Save State Cache
         uses: actions/cache/save@v4
         if: always()
         with:
           path: monitor_state.json
           key: testflight-monitor-state-${{ github.run_id }}
-
-      - name: Trigger Next Cloud Cycle (Continuous 24/7 Relay)
-        if: always()
-        run: |
-          echo "Triggering next 24/7 cloud cycle via GitHub API..."
-          curl -s -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/monitor.yml/dispatches \
-            -d '{"ref":"main"}' || true
