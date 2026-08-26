@@ -16,7 +16,6 @@ concurrency:
 jobs:
   cloud-monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 250
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
