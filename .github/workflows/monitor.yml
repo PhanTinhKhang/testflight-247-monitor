@@ -9,9 +9,12 @@ on:
     branches:
       - main
 
-# Ensure permissions to self-trigger workflows
+concurrency:
+  group: testflight-247-cloud-monitor
+  cancel-in-progress: false
+
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 jobs:
@@ -30,11 +33,26 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run 24/7 Cloud Monitor (High-Frequency 5s Polling)
+      - name: Restore Persistent State Cache
+        uses: actions/cache/restore@v4
+        with:
+          path: monitor_state.json
+          key: testflight-monitor-state-${{ github.run_id }}
+          restore-keys: |
+            testflight-monitor-state-
+
+      - name: Run 24/7 Cloud Monitor (High-Frequency 5s Polling & 24h Reports)
         run: |
           python tf_monitor.py --link-id "EgZ8sE2P" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --interval 5 --max-duration 280 --silent-start
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Save Persistent State Cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: monitor_state.json
+          key: testflight-monitor-state-${{ github.run_id }}
 
       - name: Trigger Next Cloud Cycle (Continuous 24/7 Relay)
         if: always()

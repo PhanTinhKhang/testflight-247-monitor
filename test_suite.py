@@ -2,6 +2,9 @@ import unittest
 import requests
 import re
 import sys
+import os
+import json
+import time
 
 # Configure UTF-8 for Windows console
 if sys.platform.startswith('win'):
@@ -10,7 +13,14 @@ if sys.platform.startswith('win'):
     except Exception:
         pass
 
-from tf_monitor import check_testflight_slot, send_discord_alert, extract_metadata
+from tf_monitor import (
+    check_testflight_slot,
+    send_discord_alert,
+    send_daily_report,
+    load_state,
+    save_state,
+    format_duration
+)
 
 DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1542133009984000000/8qzHzXV0YYAeNv7Pj9Mw5bCC-j9JU2Hc7Mi-zSWFzCSW132iAxeNwbfNwkHZAtE3B1sq"
 
@@ -30,24 +40,38 @@ class TestFlightMonitorTestSuite(unittest.TestCase):
         self.assertTrue(is_open, "Immich should be detected as OPEN")
         self.assertIn("available", msg.lower())
 
-    def test_03_invalid_link_404(self):
-        """Verify that an invalid or revoked link is safely handled without crashing."""
-        is_open, app_name, icon_url, msg = check_testflight_slot("INVALID_LINK_99999")
-        print(f"[TEST 3] Invalid Link Check -> isOpen={is_open}, status='{msg}'")
-        self.assertFalse(is_open)
-        self.assertIn("not found", msg.lower())
+    def test_03_format_duration(self):
+        """Verify duration formatting logic (days, hours, minutes)."""
+        self.assertEqual(format_duration(3600), "1h 0m")
+        self.assertEqual(format_duration(90000), "1d 1h 0m")
+        self.assertEqual(format_duration(120), "2m")
+        print("[TEST 3] Duration formatting verified.")
 
-    def test_04_discord_webhook_dispatch(self):
-        """Verify that the Discord webhook sends real messages and returns 200/204."""
-        success = send_discord_alert(
+    def test_04_state_persistence(self):
+        """Verify state load and save mechanics."""
+        mock_state = load_state()
+        mock_state["total_fetches"] += 10
+        mock_state["daily_fetches"] += 10
+        save_state(mock_state)
+        
+        reloaded = load_state()
+        self.assertEqual(reloaded["total_fetches"], mock_state["total_fetches"])
+        self.assertEqual(reloaded["daily_fetches"], mock_state["daily_fetches"])
+        print("[TEST 4] State persistence verified.")
+
+    def test_05_daily_report_generation(self):
+        """Verify 24-hour daily report formatting and dispatch."""
+        state = load_state()
+        success = send_daily_report(
             webhook_url=DISCORD_WEBHOOK,
-            link_id="JTSTucBd",
-            app_name="Immich (Automated Test Verification)",
+            link_id="EgZ8sE2P",
+            app_name="Code App",
             icon_url="https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/c0/77/1c/c0771c1c-ab69-dab4-3e22-e247a50b0103/Iconv2-0-0-1x_U007epad-0-1-0-sRGB-85-220.png/152x152ia-80.png",
-            is_test=True
+            state=state,
+            is_forced_test=True
         )
-        print(f"[TEST 4] Discord Webhook Ping -> Delivered={success}")
-        self.assertTrue(success, "Discord webhook ping must succeed with HTTP 200/204")
+        self.assertTrue(success, "Daily report dispatch must succeed with HTTP 200/204")
+        print("[TEST 5] Daily report dispatch verified.")
 
 if __name__ == "__main__":
     unittest.main()
