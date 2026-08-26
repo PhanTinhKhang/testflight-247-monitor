@@ -1,0 +1,47 @@
+name: TestFlight 24/7 Cloud Monitor
+
+on:
+  schedule:
+    # Trigger automatically every 5 minutes in GitHub's free cloud runners
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allows manual trigger button in GitHub UI
+  push:
+    branches:
+      - main
+
+# Ensure permissions to self-trigger workflows
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  cloud-monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run 24/7 Cloud Monitor (High-Frequency 5s Polling)
+        run: |
+          python tf_monitor.py --link-id "EgZ8sE2P" --webhook "${{ secrets.DISCORD_WEBHOOK }}" --interval 5 --max-duration 280 --silent-start
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Trigger Next Cloud Cycle (Continuous 24/7 Relay)
+        if: always()
+        run: |
+          echo "Triggering next 24/7 cloud cycle via GitHub API..."
+          curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/monitor.yml/dispatches \
+            -d '{"ref":"main"}' || true
